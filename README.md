@@ -1,6 +1,4 @@
-# README
-
-## I wrote this because sometimes I would:
+# I wrote this because sometimes I would:
 
 * forget to fork, and would work against the master repo.
 * forget to start a branch, and would accidentally work on the master branch
