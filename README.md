@@ -10,7 +10,7 @@ Now I just run `lambdaclone git@github.com:tfolbrecht/lambdaclone.git`
 
 ## Getting started
 
-You must fill out the scripts variables with the following
+You must fill out the scripts variables inside quotes " with the following
 
 
 | Bash Variables | Values |
