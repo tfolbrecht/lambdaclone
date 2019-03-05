@@ -8,7 +8,7 @@
 * Forget to add my project manager, and they miss out on notifications on my commits
 * Run git clone in the wrong directory, and have to delete it, and reclone 
 
-Now I just run `lambdaclone`
+Now I just run `lambdaclone git@github.com:tfolbrecht/lambdaclone.git`
 
 ## Getting started
 
