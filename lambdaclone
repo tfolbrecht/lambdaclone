@@ -1,0 +1,87 @@
+#!/bin/bash
+
+######
+# Variables!
+user=
+secretkey=
+branch_name=
+PMuser=
+project_parent_path=
+######
+
+if [ -z "$user" ] || [ -z "$secretkey" ] || [ -z "$branch_name" ] || [ -z "$project_parent_path" ]
+then
+  echo "Empty variable, exiting script"
+  exit
+fi
+
+# Fail gracefully
+## Needs to check if git username
+## Needs to check if API key valid
+## Needs to check if inputted git repo is valid
+
+# To check github ssh config on git failure
+#ssh -q git@github.com &> /dev/null
+#if [ $? = "1" ]
+#then
+#  echo "GitHub ssh is configured"
+#else
+#  echo "Configure github ssh, no http fallback, exiting"
+#  exit
+#fi
+
+giturl=$1
+#echo -e "Input todays project git clone link:"
+#read giturl
+
+if [ -z "$giturl" ]
+then
+  exit
+fi
+
+if [[ $giturl = git@github.com* ]]
+then
+  strip1=${giturl##git@github.com:}
+  strip2=${strip1%.git}
+fi
+
+if [[ $giturl = https://github.com* ]]
+then
+  strip1=${giturl##git@github.com:}
+  strip2=${strip1%.git}
+fi
+
+if [[ $giturl != git@github.com* ]] && [[ $giturl != https://github.com* ]] 
+then
+  echo "Please provide valid github clone link, exiting"
+  exit
+fi
+
+reponame=${strip2##*/}
+giturluser=${strip2%/${reponame}}
+
+printf "\nForking: $reponame from User: $giturluser\n"
+
+curl -X POST -u "${user}:${secretkey}" \
+    "https://api.github.com/repos/${giturluser}/${reponame}/forks"  &> /dev/null
+
+cd $project_parent_path
+
+git clone git@github.com:${user}/${reponame}.git
+
+cd $reponame
+
+git checkout -b "${branch_name}"
+git push --set-upstream origin ${branch_name}
+
+if [[ ! -z "$PMuser" ]]
+then
+  echo "adding ${PMuser} as collaborator"
+  curl -i -u "${user}:${secretkey}" -X PUT -d "" "https://api.github.com/repos/${user}/${reponame}/collaborators/${PMuser}"  &> /dev/null
+else
+  echo "no PM string, no collaborator added" 
+fi
+
+printf "\nhttps://github.com/$user/$reponame/\n"
+
+# code ${project_parent_path}/${reponame}
