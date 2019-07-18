@@ -78,7 +78,7 @@ fi
 #Prompt for upstream project URL if not provided on command line
 giturl=$1
 if [ -z "$1" ]; then
-  echo -e "Input todays project git clone link:\n(or just hit <Enter> to exit)"
+  echo -e "Input todays project git clone link (or press <Enter> to exit): "
   read giturl
 fi
 
