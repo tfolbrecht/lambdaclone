@@ -5,14 +5,25 @@
 user=
 secretkey=
 branch_name=
-PMuser=
+TLuser=
 project_parent_path=
+subdir_weeks=false
+editor_bin=
+debug=false
 ######
 
-if [ -z "$user" ] || [ -z "$secretkey" ] || [ -z "$branch_name" ] || [ -z "$project_parent_path" ]
-then
+if [ -z "$user" ] || [ -z "$secretkey" ] || [ -z "$branch_name" ] || [ -z "$project_parent_path" ]; then
   echo "Empty variable, exiting script"
   exit
+else
+  if [ "$debug" = "true" ]; then
+    echo "User: $user"
+    echo "Branch: $branch_name"
+    echo "Path: $project_parent_path"
+    echo "Week Subdirs: $subdir_weeks"
+    echo "Editor bin: $editor_bin"
+    echo ""
+  fi
 fi
 
 # Fail gracefully
@@ -30,58 +41,150 @@ fi
 #  exit
 #fi
 
+#Append Week_## subdirectory to project parent path, if configured to do so
+if [ "$subdir_weeks" = "true" ]; then
+  if [ -r "${project_parent_path}/class_week" ]; then
+    class_week=$(<"${project_parent_path}/class_week")
+  fi
+
+  if [ -z $class_week ] || [ $class_week -lt 1 ]; then
+    read -p "Specify class week # using 2 digit format, i.e. 07: " class_week
+  else
+    read -p "Specify class week # using 2 digit format, or press <Enter> for $class_week: " new_class_week
+    class_week=${new_class_week:-$class_week}
+  fi
+
+  if [ "$debug" = "true" ]; then
+    echo "class_week: $class_week"
+  fi
+  echo $class_week > ${project_parent_path}/class_week
+
+  project_parent_path=${project_parent_path}/Week_${class_week}
+
+  if [ "$debug" = "true" ]; then
+    echo "Path: $project_parent_path"
+    echo ""
+  fi
+
+  #Create directory if it doesn't already exist
+  if [ ! -d "${project_parent_path}" ]; then
+    echo "Creating new directory for Week_$class_week..."
+    mkdir -p ${project_parent_path}
+  fi
+fi
+
+#Prompt for upstream project URL if not provided on command line
 giturl=$1
-#echo -e "Input todays project git clone link:"
-#read giturl
+if [ -z "$1" ]; then
+  echo -e "Input todays project git clone link (or press <Enter> to exit): "
+  read giturl
+fi
 
-if [ -z "$giturl" ]
-then
+#Input sanity checks
+if [ -z "$giturl" ]; then
   exit
+else
+  if [[ $giturl = git@github.com* ]]; then
+    strip1=${giturl##git@github.com:}
+    strip2=${strip1%.git}
+  elif [[ $giturl = https://github.com* ]]; then
+    strip1=${giturl##git@github.com:}
+    strip2=${strip1%.git}
+  else #if [[ $giturl != git@github.com* ]] && [[ $giturl != https://github.com* ]] then
+    echo "Please provide valid github clone link! Exiting..."
+    exit
+  fi
 fi
 
-if [[ $giturl = git@github.com* ]]
-then
-  strip1=${giturl##git@github.com:}
-  strip2=${strip1%.git}
-fi
-
-if [[ $giturl = https://github.com* ]]
-then
-  strip1=${giturl##git@github.com:}
-  strip2=${strip1%.git}
-fi
-
-if [[ $giturl != git@github.com* ]] && [[ $giturl != https://github.com* ]] 
-then
-  echo "Please provide valid github clone link, exiting"
-  exit
-fi
-
+#Parsing input
 reponame=${strip2##*/}
 giturluser=${strip2%/${reponame}}
 
+#Perform the fork
 printf "\nForking: $reponame from User: $giturluser\n"
+if [ "$debug" = "true" ]; then
+  echo -e "*** Command to be executed:\ncurl -X POST -u \"${user}:${secretkey}\" \"https://api.github.com/repos/${giturluser}/${reponame}/forks\""
+  echo ""
+fi
+curl -X POST -u "${user}:${secretkey}" "https://api.github.com/repos/${giturluser}/${reponame}/forks"  &> /dev/null
 
-curl -X POST -u "${user}:${secretkey}" \
-    "https://api.github.com/repos/${giturluser}/${reponame}/forks"  &> /dev/null
+#Switch to local machine project directory
+if [ "$debug" = "true" ]; then
+  echo -e "*** Changing directory to:\n\"$project_parent_path\""
+  echo ""
+fi
+cd "$project_parent_path"
 
-cd $project_parent_path
+#Clone forked project into a subdirectory with the repository name within the current directory
+if [ -d "${reponame}" ]; then
+  echo -e "WARNING: Repository directory \"$reponame\" already exists!"
+  read -p "How do you want to proceed? [D]elete, [R]ename, E[x]it: " choice
+  case "$choice" in
+  [dD])
+      echo "Deleting \"$reponame\"..."
+      rm -rf "$reponame"
+      ;;
+  [rR])
+      read -p "Specify new directory name [$reponame.backup]: " new_reponame
+      new_reponame=${new_reponame:-"$reponame.backup"}
+      if [ "$debug" = "true" ]; then
+        echo -e "*** New repo name: \"$reponame.backup\""
+        echo ""
+      fi
+      mv "$reponame" "$new_reponame"
+      ;;
+  *)
+      echo "Exiting..."
+      exit
+      ;;
+  esac
 
-git clone git@github.com:${user}/${reponame}.git
+  if [ "$debug" = "true" ]; then
+    echo -e "*** Command to be executed:\ngit clone git@github.com:${giturluser}/${reponame}.git"
+    echo ""
+  fi
+fi
+git clone git@github.com:${giturluser}/${reponame}.git
 
-cd $reponame
+#Switch to local repository directory created in above clone
+if [ "$debug" = "true" ]; then
+  echo -e "*** Changing directory to:\n\"$reponame\""
+  echo ""
+fi
+cd "$reponame"
 
+#Create local & remote custom branches
+if [ "$debug" = "true" ]; then
+  echo -e "*** Commands to be executed:\ngit checkout -b \"${branch_name}\"\ngit push --set-upstream origin ${branch_name}"
+  echo ""
+fi
 git checkout -b "${branch_name}"
 git push --set-upstream origin ${branch_name}
 
-if [[ ! -z "$PMuser" ]]
-then
-  echo "adding ${PMuser} as collaborator"
-  curl -i -u "${user}:${secretkey}" -X PUT -d "" "https://api.github.com/repos/${user}/${reponame}/collaborators/${PMuser}"  &> /dev/null
+#Set remote default branch to custom branch
+if [ "$debug" = "true" ]; then
+  echo -e "*** Command to be executed:\ncurl -i -u \"${user}:${secretkey}\" -X PATCH -d \"{\"name\":\"${reponame}\",\"default_branch\":\"${branch_name}\"}\" \"https://api.github.com/repos/${user}/${reponame}\""
+  echo ""
+fi
+curl -i -u "${user}:${secretkey}" -X PATCH -d "{\"name\":\"${reponame}\",\"default_branch\":\"${branch_name}\"}" "https://api.github.com/repos/${user}/${reponame}"  &> /dev/null
+
+#Add Team Lead as collaborator
+if [[ ! -z "$TLuser" ]]; then
+  echo "adding ${TLuser} as collaborator"
+
+  if [ "$debug" = "true" ]; then
+    echo -e "*** Command to be executed:\ncurl -i -u \"${user}:${secretkey}\" -X PUT -d \"\" \"https://api.github.com/repos/${user}/${reponame}/collaborators/${TLuser}\""
+    echo ""
+  fi
+  curl -i -u "${user}:${secretkey}" -X PUT -d "" "https://api.github.com/repos/${user}/${reponame}/collaborators/${TLuser}"  &> /dev/null
 else
-  echo "no PM string, no collaborator added" 
+  echo "no TL string provided, no collaborator added" 
 fi
 
+#Print URL to created remote repository
 printf "\nhttps://github.com/$user/$reponame/\n"
 
-# code ${project_parent_path}/${reponame}
+#Launch editor opening local repository, if configured
+if [[ ! -z "$editor_bin" ]]; then
+  ${editor_bin} ${project_parent_path}/${reponame}
+fi
