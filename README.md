@@ -31,10 +31,10 @@ Move script somewhere in your user execution path like `/usr/local/bin/` or `~/.
 ## Todo
 
 - ~~Check if variables empty~~
+- ~~auto open editor with new repo path~~
 - test against multiple configurations
 - check credential validity
 - support non ssh
 - make github api only version (fork, add collaborator, set branch)
 - best practice api key storage
-- ~~auto open editor with new repo path~~
 - interactive ncurses menu, options, etc
