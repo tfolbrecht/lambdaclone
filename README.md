@@ -26,7 +26,7 @@ You must fill out the scripts variables inside quotes " with the following
 
 *note,* *not the most secure method of storing api keys lol*
 
-Move script somewhere in your user execution path like `/usr/local/bin/` or `~/.local/bin`
+Move/symlink script somewhere in your user execution path like `/usr/local/bin/` or `~/.local/bin`
 
 ## Todo
 
