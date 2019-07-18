@@ -12,8 +12,6 @@ editor_bin=
 debug=false
 ######
 
-### TODO: Store above in separate settings file, read in during execution. Prompt user for data and write out to file if not found.
-
 if [ -z "$user" ] || [ -z "$secretkey" ] || [ -z "$branch_name" ] || [ -z "$project_parent_path" ]; then
   echo "Empty variable, exiting script"
   exit
