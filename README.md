@@ -18,8 +18,11 @@ You must fill out the scripts variables inside quotes " with the following
 | user                  | Your GitHub Username |
 | secretkey             | Your [GitHub Token](https://github.com/settings/tokens)|
 | branch_name           | The name of the branch you create, I use firstname-lastname |
-| PMuser                | Your PM's Username |
+| TLuser                | Your TL's Username |
 | project_parent_path   | The path to the directory you wnat to clone to |
+| subdir_weeks          | Set to true if you want to use Week_## subdirectory structure |
+| editor_bin            | Specify editor command |
+| debug                 | Set to true to output debugging messages |
 
 *note,* *not the most secure method of storing api keys lol*
 
@@ -33,5 +36,5 @@ Move script somewhere in your user execution path like `/usr/local/bin/` or `~/.
 - support non ssh
 - make github api only version (fork, add collaborator, set branch)
 - best practice api key storage
-- auto open editor with new repo path
+- ~~auto open editor with new repo path~~
 - interactive ncurses menu, options, etc
