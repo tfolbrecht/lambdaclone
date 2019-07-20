@@ -2,34 +2,39 @@
 
 ######
 # Variables!
-user=
+email=
+username=
 secretkey=
 branch_name=
 TLuser=
+TL5user=
 project_parent_path=
+project_prefix=
 subdir_weeks=false
 editor_bin=
 debug=false
 ######
 
-### TODO: Store above in separate settings file, read in during execution. Prompt user for data and write out to file if not found.
-
-if [ -z "$user" ] || [ -z "$secretkey" ] || [ -z "$branch_name" ] || [ -z "$project_parent_path" ]; then
+if [ -z "$email" ] || [ -z "$secretkey" ] || [ -z "$branch_name" ] || [ -z "$project_parent_path" ]; then
   echo "Empty variable, exiting script"
   exit
 else
   if [ "$debug" = "true" ]; then
-    echo "User: $user"
-    echo "Branch: $branch_name"
-    echo "Path: $project_parent_path"
+    echo "Email:        $email"
+    echo "Userame:      $username"
+    echo "Branch:       $branch_name"
+    echo "Path:         $project_parent_path"
+    echo "Prefix:       $project_prefix"
     echo "Week Subdirs: $subdir_weeks"
-    echo "Editor bin: $editor_bin"
+    echo "Editor bin:   $editor_bin"
+    echo "Primary TL:   $TLuser"
+    echo "5th Day TL:   $TL5user"
     echo ""
   fi
 fi
 
 # Fail gracefully
-## Needs to check if git username
+## Needs to check if git email
 ## Needs to check if API key valid
 ## Needs to check if inputted git repo is valid
 
@@ -57,14 +62,14 @@ if [ "$subdir_weeks" = "true" ]; then
   fi
 
   if [ "$debug" = "true" ]; then
-    echo "class_week: $class_week"
+    echo "class_week:   $class_week"
   fi
   echo $class_week > ${project_parent_path}/class_week
 
   project_parent_path=${project_parent_path}/Week_${class_week}
 
   if [ "$debug" = "true" ]; then
-    echo "Path: $project_parent_path"
+    echo "Path:         $project_parent_path"
     echo ""
   fi
 
@@ -105,10 +110,32 @@ giturluser=${strip2%/${reponame}}
 #Perform the fork
 printf "\nForking: $reponame from User: $giturluser\n"
 if [ "$debug" = "true" ]; then
-  echo -e "*** Command to be executed:\ncurl -X POST -u \"${user}:${secretkey}\" \"https://api.github.com/repos/${giturluser}/${reponame}/forks\""
+  echo -e "*** Command to be executed:\ncurl -X POST -u \"${email}:${secretkey}\" \"https://api.github.com/repos/${giturluser}/${reponame}/forks\""
   echo ""
 fi
-curl -X POST -u "${user}:${secretkey}" "https://api.github.com/repos/${giturluser}/${reponame}/forks"  &> /dev/null
+curl -X POST -u "${email}:${secretkey}" "https://api.github.com/repos/${giturluser}/${reponame}/forks"  &> /dev/null
+
+#Prepend Prefix to remote & local repositories, if specified
+if [ ! -z $project_prefix ]; then
+  new_reponame=$project_prefix$reponame
+
+  #remote first
+  if [ "$debug" = "true" ]; then
+    echo -e "*** Command to be executed:\ncurl -i -u \"${email}:${secretkey}\" -X PATCH -d \"{\"name\":\"${new_reponame}\"}\" \"https://api.github.com/repos/${username}/${reponame}\""
+    echo ""
+  fi
+  curl -i -u "${email}:${secretkey}" -X PATCH -d "{\"name\":\"${new_reponame}\"}" "https://api.github.com/repos/${username}/${reponame}"  &> /dev/null
+
+  #local
+  if [ "$debug" = "true" ]; then
+    echo -e "*** Command to be executed:\nmv \"$reponame\" \"$project_prefix$reponame\""
+    echo ""
+  fi
+  mv "$reponame" "$project_prefix$reponame"
+
+  #update variable
+  reponame=$new_reponame
+fi
 
 #Switch to local machine project directory
 if [ "$debug" = "true" ]; then
@@ -140,13 +167,13 @@ if [ -d "${reponame}" ]; then
       exit
       ;;
   esac
-
-  if [ "$debug" = "true" ]; then
-    echo -e "*** Command to be executed:\ngit clone git@github.com:${giturluser}/${reponame}.git"
-    echo ""
-  fi
 fi
-git clone git@github.com:${giturluser}/${reponame}.git
+
+if [ "$debug" = "true" ]; then
+  echo -e "*** Command to be executed:\ngit clone git@github.com:${username}/${reponame}.git"
+  echo ""
+fi
+git clone git@github.com:${username}/${reponame}.git
 
 #Switch to local repository directory created in above clone
 if [ "$debug" = "true" ]; then
@@ -165,26 +192,45 @@ git push --set-upstream origin ${branch_name}
 
 #Set remote default branch to custom branch
 if [ "$debug" = "true" ]; then
-  echo -e "*** Command to be executed:\ncurl -i -u \"${user}:${secretkey}\" -X PATCH -d \"{\"name\":\"${reponame}\",\"default_branch\":\"${branch_name}\"}\" \"https://api.github.com/repos/${user}/${reponame}\""
+  echo -e "*** Command to be executed:\ncurl -i -u \"${email}:${secretkey}\" -X PATCH -d \"{\"name\":\"${reponame}\",\"default_branch\":\"${branch_name}\"}\" \"https://api.github.com/repos/${username}/${reponame}\""
   echo ""
 fi
-curl -i -u "${user}:${secretkey}" -X PATCH -d "{\"name\":\"${reponame}\",\"default_branch\":\"${branch_name}\"}" "https://api.github.com/repos/${user}/${reponame}"  &> /dev/null
+curl -i -u "${email}:${secretkey}" -X PATCH -d "{\"name\":\"${reponame}\",\"default_branch\":\"${branch_name}\"}" "https://api.github.com/repos/${username}/${reponame}"  &> /dev/null
 
-#Add Team Lead as collaborator
+#Add Primary Team Lead as collaborator
 if [[ ! -z "$TLuser" ]]; then
   echo "adding ${TLuser} as collaborator"
 
   if [ "$debug" = "true" ]; then
-    echo -e "*** Command to be executed:\ncurl -i -u \"${user}:${secretkey}\" -X PUT -d \"\" \"https://api.github.com/repos/${user}/${reponame}/collaborators/${TLuser}\""
+    echo -e "*** Command to be executed:\ncurl -i -u \"${email}:${secretkey}\" -X PUT -d \"\" \"https://api.github.com/repos/${username}/${reponame}/collaborators/${TLuser}\""
     echo ""
   fi
-  curl -i -u "${user}:${secretkey}" -X PUT -d "" "https://api.github.com/repos/${user}/${reponame}/collaborators/${TLuser}"  &> /dev/null
+  curl -i -u "${email}:${secretkey}" -X PUT -d "" "https://api.github.com/repos/${username}/${reponame}/collaborators/${TLuser}"  &> /dev/null
 else
-  echo "no TL string provided, no collaborator added" 
+  echo "no TL string provided, no collaborator added"
+fi
+
+#Optionally add 5th Day Team Lead as collaborator
+if [[ ! -z "$TL5user" ]]; then
+  read -p "Add 5th Day Team Lead as collaborator? [Y]es, [N]o (default): " choice
+  case "$choice" in
+  [yY])
+      echo "adding ${TL5user} as collaborator"
+
+      if [ "$debug" = "true" ]; then
+        echo -e "*** Command to be executed:\ncurl -i -u \"${email}:${secretkey}\" -X PUT -d \"\" \"https://api.github.com/repos/${username}/${reponame}/collaborators/${TL5user}\""
+        echo ""
+      fi
+      curl -i -u "${email}:${secretkey}" -X PUT -d "" "https://api.github.com/repos/${username}/${reponame}/collaborators/${TL5user}"  &> /dev/null
+      ;;
+  *)
+      #Do nothing
+      ;;
+  esac
 fi
 
 #Print URL to created remote repository
-printf "\nhttps://github.com/$user/$reponame/\n"
+printf "\nhttps://github.com/$username/$reponame/\n"
 
 #Launch editor opening local repository, if configured
 if [[ ! -z "$editor_bin" ]]; then

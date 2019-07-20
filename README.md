@@ -15,11 +15,14 @@ You must fill out the scripts variables inside quotes " with the following
 
 | Bash Variables | Values |
 | ----- | :-----|
-| user                  | Your GitHub Username |
+| email                 | Your GitHub account email address |
+| username              | Your GitHub account Username |
 | secretkey             | Your [GitHub Token](https://github.com/settings/tokens)|
 | branch_name           | The name of the branch you create, I use firstname-lastname |
-| TLuser                | Your TL's Username |
+| TLuser                | Your Primary TL's Username |
+| TL5user               | Your 5th Day TL's Username |
 | project_parent_path   | The path to the directory you wnat to clone to |
+| project_prefix        | Optional prefix text to prepend at beginning of your local & remote repository (Example: 'LambdaSchool_') |
 | subdir_weeks          | Set to true if you want to use Week_## subdirectory structure |
 | editor_bin            | Specify editor command |
 | debug                 | Set to true to output debugging messages |
